@@ -1,0 +1,1963 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Groq AI Playground — Ultra-Fast LLM Studio</title>
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%23f55036'/><polygon points='30,50 50,22 70,50 50,78' fill='white'/></svg>" />
+  
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            groq: {
+              orange: '#f55036',
+              orangeHover: '#d94129',
+              purple: '#8b5cf6',
+              dark: '#090a0f',
+              panel: '#10121a',
+              card: '#161924',
+              border: '#23283b',
+              borderLight: '#323952',
+              input: '#12141f',
+              textMuted: '#94a3b8'
+            }
+          },
+          fontFamily: {
+            sans: ['Inter', 'system-ui', 'sans-serif'],
+            mono: ['JetBrains Mono', 'Fira Code', 'monospace']
+          }
+        }
+      }
+    };
+  </script>
+
+  <!-- React 18 & Babel Standalone -->
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+  <style>
+    body {
+      background-color: #090a0f;
+      color: #e2e8f0;
+      font-family: 'Inter', sans-serif;
+    }
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: rgba(16, 18, 26, 0.6);
+    }
+    ::-webkit-scrollbar-thumb {
+      background: rgba(75, 85, 99, 0.4);
+      border-radius: 9999px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: rgba(107, 114, 128, 0.7);
+    }
+    .gradient-groq {
+      background: linear-gradient(135deg, #f55036 0%, #e0381d 100%);
+    }
+    @keyframes pulse-subtle {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.85; transform: scale(1.02); }
+    }
+    .pulse-glow {
+      animation: pulse-subtle 2.5s infinite ease-in-out;
+    }
+    .cursor-blink {
+      display: inline-block;
+      width: 7px;
+      height: 15px;
+      background-color: #f55036;
+      margin-left: 2px;
+      vertical-align: middle;
+      animation: blink 0.8s infinite;
+    }
+    @keyframes blink {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0; }
+    }
+  </style>
+</head>
+<body class="overflow-x-hidden selection:bg-orange-500/30 selection:text-orange-200">
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const { useState, useEffect, useRef, useMemo } = React;
+
+    // --- ICONS (SVG Components) ---
+    const IconGroq = () => (
+      <svg className="w-6 h-6 text-orange-500" viewBox="0 0 100 100" fill="currentColor">
+        <rect width="100" height="100" rx="22" fill="#f55036"/>
+        <polygon points="30,50 50,22 70,50 50,78" fill="white"/>
+      </svg>
+    );
+
+    const IconKey = ({ className = "w-4 h-4" }) => (
+      <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
+      </svg>
+    );
+
+    const IconEye = ({ className = "w-4 h-4" }) => (
+      <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+      </svg>
+    );
+
+    const IconEyeOff = ({ className = "w-4 h-4" }) => (
+      <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l18 18" />
+      </svg>
+    );
+
+    const IconShieldCheck = ({ className = "w-4 h-4" }) => (
+      <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+      </svg>
+    );
+
+    const IconPlay = ({ className = "w-4 h-4" }) => (
+      <svg className={className} fill="currentColor" viewBox="0 0 24 24">
+        <path d="M8 5v14l11-7z" />
+      </svg>
+    );
+
+    const IconSquare = ({ className = "w-4 h-4" }) => (
+      <svg className={className} fill="currentColor" viewBox="0 0 24 24">
+        <rect x="6" y="6" width="12" height="12" rx="2" />
+      </svg>
+    );
+
+    const IconPlus = ({ className = "w-4 h-4" }) => (
+      <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+      </svg>
+    );
+
+    const IconTrash = ({ className = "w-4 h-4" }) => (
+      <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+      </svg>
+    );
+
+    const IconCopy = ({ className = "w-4 h-4" }) => (
+      <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+      </svg>
+    );
+
+    const IconCheck = ({ className = "w-4 h-4" }) => (
+      <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+      </svg>
+    );
+
+    const IconGlobe = ({ className = "w-4 h-4" }) => (
+      <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" />
+      </svg>
+    );
+
+    const IconRotateCcw = ({ className = "w-4 h-4" }) => (
+      <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+      </svg>
+    );
+
+    const IconSliders = ({ className = "w-4 h-4" }) => (
+      <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
+      </svg>
+    );
+
+    const IconCode = ({ className = "w-4 h-4" }) => (
+      <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
+      </svg>
+    );
+
+    const IconExternalLink = ({ className = "w-3 h-3" }) => (
+      <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+      </svg>
+    );
+
+    const IconZap = ({ className = "w-4 h-4" }) => (
+      <svg className={className} fill="currentColor" viewBox="0 0 24 24">
+        <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" />
+      </svg>
+    );
+
+    const IconInfo = ({ className = "w-3.5 h-3.5" }) => (
+      <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+      </svg>
+    );
+
+    const IconAlert = ({ className = "w-4 h-4" }) => (
+      <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+      </svg>
+    );
+
+    const IconClose = ({ className = "w-4 h-4" }) => (
+      <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+      </svg>
+    );
+
+    // --- DEFAULT MODELS & PRESETS ---
+    const DEFAULT_MODELS = [
+      { id: 'llama-3.3-70b-versatile', name: 'Llama 3.3 70B Versatile', context: '128K', badge: 'Recommended', category: 'llama' },
+      { id: 'llama-3.1-8b-instant', name: 'Llama 3.1 8B Instant', context: '128K', badge: 'Ultra-Fast', category: 'llama' },
+      { id: 'deepseek-r1-distill-llama-70b', name: 'DeepSeek R1 Distill 70B', context: '128K', badge: 'Reasoning', category: 'deepseek' },
+      { id: 'deepseek-r1-distill-qwen-32b', name: 'DeepSeek R1 Distill 32B', context: '128K', badge: 'Reasoning', category: 'deepseek' },
+      { id: 'qwen-2.5-32b', name: 'Qwen 2.5 32B Instruct', context: '128K', badge: 'Coding & Math', category: 'qwen' },
+      { id: 'mixtral-8x7b-32768', name: 'Mixtral 8x7B 32k', context: '32K', badge: 'MoE', category: 'mistral' },
+      { id: 'gemma2-9b-it', name: 'Gemma 2 9B IT', context: '8K', badge: 'Google', category: 'gemma' },
+      { id: 'llama-3.1-70b-versatile', name: 'Llama 3.1 70B', context: '128K', badge: 'Meta', category: 'llama' }
+    ];
+
+    const PRESET_TEMPLATES = {
+      sentiment: {
+        name: 'Sentiment Classifier (Few-shot)',
+        systemPrompt: 'You are an accurate sentiment classifier. Output strictly a JSON object with keys "sentiment" (Positive, Negative, or Neutral) and "confidence" (0.0 to 1.0).',
+        examples: [
+          {
+            id: 'ex-1',
+            userInput: 'The product arrived two days early and works like a dream!',
+            assistantResponse: '{"sentiment": "Positive", "confidence": 0.98}'
+          },
+          {
+            id: 'ex-2',
+            userInput: 'Total waste of money. Broke after ten minutes.',
+            assistantResponse: '{"sentiment": "Negative", "confidence": 0.99}'
+          },
+          {
+            id: 'ex-3',
+            userInput: 'The package contains 3 items as listed in the user manual.',
+            assistantResponse: '{"sentiment": "Neutral", "confidence": 0.94}'
+          }
+        ],
+        sampleInput: 'The battery life is acceptable, though the outer casing feels slightly flimsy.'
+      },
+      codeTranslation: {
+        name: 'Python to TypeScript (One-shot)',
+        systemPrompt: 'You are an expert polyglot programmer. Translate the provided Python function into strictly typed TypeScript. Do not include markdown preamble, only clean code.',
+        examples: [
+          {
+            id: 'ex-code-1',
+            userInput: 'def greet(name: str, count: int = 1) -> str:\n    return f"Hello {name}!" * count',
+            assistantResponse: 'export function greet(name: string, count: number = 1): string {\n  return `Hello ${name}!`.repeat(count);\n}'
+          }
+        ],
+        sampleInput: 'def calculate_discount(price: float, percentage: float) -> float:\n    if percentage < 0 or percentage > 100:\n        raise ValueError("Invalid percentage")\n    return round(price * (1 - percentage / 100), 2)'
+      },
+      jsonExtractor: {
+        name: 'Meeting Notes Extractor (Few-shot)',
+        systemPrompt: 'Extract key business details from unstructured notes into a structured JSON object with keys: attendees, dateOrTime, topic, and actionItems.',
+        examples: [
+          {
+            id: 'ex-json-1',
+            userInput: 'Synced with Alex and Maya Tuesday at 2pm on the Q4 marketing budget. Action: Alex to finalize ad spend by Friday.',
+            assistantResponse: '{"attendees": ["Alex", "Maya"], "dateOrTime": "Tuesday 2pm", "topic": "Q4 marketing budget", "actionItems": ["Alex: finalize ad spend by Friday"]}'
+          },
+          {
+            id: 'ex-json-2',
+            userInput: 'Client check-in with Dr. Carter regarding the EHR system upgrade. Approved contract extension through 2027.',
+            assistantResponse: '{"attendees": ["Dr. Carter"], "dateOrTime": "Current", "topic": "EHR system upgrade", "actionItems": ["Execute contract extension through 2027"]}'
+          }
+        ],
+        sampleInput: 'Met with Engineering leads Jordan and Sarah today at 11am to review database indexing. Sarah will benchmark PostgreSQL queries by Thursday afternoon.'
+      },
+      zeroShot: {
+        name: 'Zero-shot Assistant',
+        systemPrompt: 'You are a brilliant AI assistant running on Groq LPUs. Provide concise, highly accurate, and insightful explanations.',
+        examples: [],
+        sampleInput: 'Explain how Groq LPU (Language Processing Unit) deterministic architecture achieves such high token throughput compared to GPU clusters.'
+      }
+    };
+
+    // --- PROMPTING TECHNIQUE HELPER ---
+    function getPromptingTechnique(count) {
+      if (count === 0) {
+        return {
+          type: 'Zero-shot',
+          label: 'Zero-shot',
+          badgeBg: 'bg-cyan-500/15',
+          badgeBorder: 'border-cyan-500/40',
+          badgeText: 'text-cyan-400',
+          desc: 'No examples provided. Model uses its internal knowledge.'
+        };
+      }
+      if (count === 1) {
+        return {
+          type: 'One-shot',
+          label: 'One-shot',
+          badgeBg: 'bg-amber-500/15',
+          badgeBorder: 'border-amber-500/40',
+          badgeText: 'text-amber-400',
+          desc: '1 example guides the expected response format and style.'
+        };
+      }
+      return {
+        type: 'Few-shot',
+        label: 'Few-shot',
+        badgeBg: 'bg-emerald-500/15',
+        badgeBorder: 'border-emerald-500/40',
+        badgeText: 'text-emerald-400',
+        desc: `${count} examples guide consistent patterns, schema and tone.`
+      };
+    }
+
+    // --- MARKDOWN & CITATION RENDERER ---
+    function MarkdownRenderer({ content, onCitationClick }) {
+      const [copiedBlock, setCopiedBlock] = useState(null);
+
+      const copyCode = (code, idx) => {
+        navigator.clipboard.writeText(code);
+        setCopiedBlock(idx);
+        setTimeout(() => setCopiedBlock(null), 2000);
+      };
+
+      const parts = content.split(/(```[\s\S]*?```)/g);
+
+      return (
+        <div className="space-y-3 text-sm leading-relaxed text-gray-200">
+          {parts.map((part, idx) => {
+            if (part.startsWith('```') && part.endsWith('```')) {
+              const firstNewline = part.indexOf('\n');
+              let lang = 'code';
+              let code = '';
+              if (firstNewline !== -1) {
+                lang = part.slice(3, firstNewline).trim() || 'code';
+                code = part.slice(firstNewline + 1, -3);
+              } else {
+                code = part.slice(3, -3);
+              }
+
+              return (
+                <div key={idx} className="my-3 rounded-lg border border-groq-border bg-[#0d0f17] overflow-hidden">
+                  <div className="flex items-center justify-between px-3.5 py-1.5 bg-[#141724] border-b border-groq-border text-xs font-mono text-gray-400">
+                    <span className="uppercase text-[11px] font-semibold text-orange-400">{lang}</span>
+                    <button
+                      onClick={() => copyCode(code, idx)}
+                      className="flex items-center gap-1.5 px-2 py-0.5 rounded text-gray-300 hover:text-white hover:bg-gray-800 transition-colors"
+                      title="Copy snippet"
+                    >
+                      {copiedBlock === idx ? (
+                        <>
+                          <IconCheck className="w-3.5 h-3.5 text-emerald-400" />
+                          <span className="text-emerald-400 text-[11px]">Copied</span>
+                        </>
+                      ) : (
+                        <>
+                          <IconCopy className="w-3.5 h-3.5" />
+                          <span className="text-[11px]">Copy</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+                  <pre className="p-3.5 text-xs font-mono text-emerald-300/90 overflow-x-auto leading-relaxed">
+                    <code>{code}</code>
+                  </pre>
+                </div>
+              );
+            }
+
+            // Normal paragraphs
+            return (
+              <div key={idx} className="space-y-2">
+                {part.split('\n\n').map((paragraph, pIdx) => {
+                  const trimmed = paragraph.trim();
+                  if (!trimmed) return null;
+
+                  if (trimmed.startsWith('### ')) {
+                    return <h3 key={pIdx} className="text-base font-bold text-white mt-3">{renderInline(trimmed.slice(4), onCitationClick)}</h3>;
+                  }
+                  if (trimmed.startsWith('## ')) {
+                    return <h2 key={pIdx} className="text-lg font-bold text-white mt-4">{renderInline(trimmed.slice(3), onCitationClick)}</h2>;
+                  }
+                  if (trimmed.startsWith('# ')) {
+                    return <h1 key={pIdx} className="text-xl font-bold text-white mt-4">{renderInline(trimmed.slice(2), onCitationClick)}</h1>;
+                  }
+
+                  const lines = paragraph.split('\n');
+                  const isList = lines.every(l => l.trim().startsWith('- ') || l.trim().startsWith('* ') || /^\d+\.\s/.test(l.trim()));
+                  if (isList) {
+                    return (
+                      <ul key={pIdx} className="space-y-1.5 pl-2 my-2">
+                        {lines.map((l, lIdx) => (
+                          <li key={lIdx} className="flex items-start gap-2">
+                            <span className="text-orange-400 mt-1 select-none">•</span>
+                            <span className="flex-1">{renderInline(l.replace(/^[-*]\s+|\d+\.\s+/, ''), onCitationClick)}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    );
+                  }
+
+                  return (
+                    <p key={pIdx} className="text-gray-300 leading-relaxed">
+                      {renderInline(paragraph, onCitationClick)}
+                    </p>
+                  );
+                })}
+              </div>
+            );
+          })}
+        </div>
+      );
+    }
+
+    function renderInline(text, onCitationClick) {
+      const regex = /(\*\*.*?\*\*|`.*?`|\[\d+\])/g;
+      const parts = text.split(regex);
+      return parts.map((seg, i) => {
+        if (seg.startsWith('**') && seg.endsWith('**')) {
+          return <strong key={i} className="font-semibold text-white">{seg.slice(2, -2)}</strong>;
+        }
+        if (seg.startsWith('`') && seg.endsWith('`')) {
+          return <code key={i} className="px-1.5 py-0.5 rounded bg-groq-card border border-groq-border text-orange-300 font-mono text-[12px]">{seg.slice(1, -1)}</code>;
+        }
+        if (/^\[\d+\]$/.test(seg)) {
+          const num = parseInt(seg.slice(1, -1), 10);
+          return (
+            <button
+              key={i}
+              type="button"
+              onClick={() => onCitationClick && onCitationClick(num)}
+              className="inline-flex items-center justify-center px-1.5 py-0.2 mx-0.5 rounded text-[11px] font-mono font-bold bg-purple-500/20 text-purple-300 border border-purple-500/40 hover:bg-purple-500/40 hover:text-white transition-colors align-super cursor-pointer"
+              title={`View Source [${num}]`}
+            >
+              {num}
+            </button>
+          );
+        }
+        return seg;
+      });
+    }
+
+    // --- MAIN PLAYGROUND COMPONENT ---
+    function App() {
+      // API Key State (In-Memory Only)
+      const [apiKey, setApiKey] = useState('');
+      const [isConnected, setIsConnected] = useState(false);
+      const [isKeyModalOpen, setIsKeyModalOpen] = useState(false);
+      const [isCodeModalOpen, setIsCodeModalOpen] = useState(false);
+
+      // Models
+      const [models, setModels] = useState(DEFAULT_MODELS);
+      const [selectedModel, setSelectedModel] = useState('llama-3.3-70b-versatile');
+      const [isLoadingModels, setIsLoadingModels] = useState(false);
+
+      // Left Sidebar: System Prompt & Examples
+      const [systemPrompt, setSystemPrompt] = useState('You are an advanced AI assistant powered by Groq LPUs. Provide clear, accurate, and concise responses.');
+      const [examples, setExamples] = useState([]);
+      const [userPrompt, setUserPrompt] = useState('Explain how Groq LPU architecture differs from traditional GPUs for LLM inference.');
+
+      // Chat Messages & Playground
+      const [messages, setMessages] = useState([]);
+      const [isGenerating, setIsGenerating] = useState(false);
+      const [isSearching, setIsSearching] = useState(false);
+      const [streamingDelta, setStreamingDelta] = useState('');
+      const [streamingStats, setStreamingStats] = useState(null);
+      const [activeSources, setActiveSources] = useState([]);
+
+      // Parameters
+      const [parameters, setParameters] = useState({
+        temperature: 0.7,
+        maxTokens: 2048,
+        topP: 1.0,
+        frequencyPenalty: 0.0,
+        presencePenalty: 0.0,
+        stream: true
+      });
+
+      // Web Search Toggle
+      const [webSearchEnabled, setWebSearchEnabled] = useState(false);
+
+      // Mobile Responsive View Tab ('examples' | 'playground' | 'parameters')
+      const [activeMobileTab, setActiveMobileTab] = useState('playground');
+
+      // Abort Controller Ref
+      const abortControllerRef = useRef(null);
+      const chatEndRef = useRef(null);
+
+      // Technique Calculation
+      const technique = useMemo(() => getPromptingTechnique(examples.length), [examples.length]);
+
+      // Open Key Modal on First Load if not connected
+      useEffect(() => {
+        if (!apiKey) {
+          setIsKeyModalOpen(true);
+        }
+      }, []);
+
+      // Scroll chat to bottom on changes
+      useEffect(() => {
+        chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+      }, [messages, streamingDelta, isGenerating, isSearching]);
+
+      // Validate and Connect API Key
+      const handleConnectKey = async (keyToValidate) => {
+        const clean = keyToValidate.trim();
+        if (!clean) return { success: false, error: 'API key cannot be empty' };
+
+        try {
+          const res = await fetch('https://api.groq.com/openai/v1/models', {
+            method: 'GET',
+            headers: {
+              'Authorization': `Bearer ${clean}`,
+              'Content-Type': 'application/json'
+            }
+          });
+
+          if (res.status === 401) {
+            return { success: false, error: 'Invalid API Key (401 Unauthorized). Please check your key at console.groq.com/keys' };
+          }
+          if (!res.ok) {
+            return { success: false, error: `Groq API Error (${res.status} ${res.statusText})` };
+          }
+
+          const data = await res.json();
+          if (Array.isArray(data.data)) {
+            const fetched = data.data
+              .filter(m => m.id && !m.id.includes('whisper'))
+              .map(m => {
+                const def = DEFAULT_MODELS.find(d => d.id === m.id);
+                return {
+                  id: m.id,
+                  name: def?.name || m.id,
+                  context: def?.context || (m.context_window ? `${Math.round(m.context_window/1024)}K` : '8K'),
+                  badge: def?.badge || 'Available',
+                  category: def?.category || 'other'
+                };
+              });
+            if (fetched.length > 0) {
+              setModels(fetched);
+            }
+          }
+
+          setApiKey(clean);
+          setIsConnected(true);
+          return { success: true };
+        } catch (err) {
+          return { success: false, error: `Network error: Failed to reach api.groq.com (${err.message})` };
+        }
+      };
+
+      const handleDisconnect = () => {
+        setApiKey('');
+        setIsConnected(false);
+        setIsKeyModalOpen(true);
+      };
+
+      // Example Management
+      const addExample = () => {
+        const newEx = {
+          id: 'ex-' + Date.now(),
+          userInput: '',
+          assistantResponse: ''
+        };
+        setExamples([...examples, newEx]);
+      };
+
+      const updateExample = (id, field, value) => {
+        setExamples(examples.map(ex => ex.id === id ? { ...ex, [field]: value } : ex));
+      };
+
+      const deleteExample = (id) => {
+        setExamples(examples.filter(ex => ex.id !== id));
+      };
+
+      const clearAllExamples = () => {
+        setExamples([]);
+      };
+
+      const loadPreset = (presetKey) => {
+        const p = PRESET_TEMPLATES[presetKey];
+        if (!p) return;
+        setSystemPrompt(p.systemPrompt);
+        setExamples(p.examples);
+        if (p.sampleInput) setUserPrompt(p.sampleInput);
+      };
+
+      // Real Web Search Engine (Wikipedia API CORS + DuckDuckGo CORS search)
+      const performWebSearch = async (query) => {
+        try {
+          // Direct Wikipedia CORS API: instant, accurate, CORS origin:* enabled
+          const res = await fetch(`https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(query)}&format=json&origin=*`);
+          if (!res.ok) throw new Error('Search failed');
+          const data = await res.json();
+          if (data?.query?.search && Array.isArray(data.query.search)) {
+            return data.query.search.slice(0, 4).map(item => ({
+              title: item.title,
+              url: `https://en.wikipedia.org/wiki/${encodeURIComponent(item.title.replace(/\s+/g, '_'))}`,
+              snippet: item.snippet.replace(/<[^>]+>/g, '').replace(/&quot;/g, '"').replace(/&#039;/g, "'").trim()
+            }));
+          }
+          return [];
+        } catch (e) {
+          console.warn('Search fallback error:', e);
+          return [];
+        }
+      };
+
+      // Stop Generation
+      const handleStopGeneration = () => {
+        if (abortControllerRef.current) {
+          abortControllerRef.current.abort();
+          abortControllerRef.current = null;
+        }
+        setIsGenerating(false);
+        setIsSearching(false);
+      };
+
+      // Clear Conversation
+      const handleClearConversation = () => {
+        if (isGenerating) handleStopGeneration();
+        setMessages([]);
+        setStreamingDelta('');
+        setStreamingStats(null);
+        setActiveSources([]);
+      };
+
+      // Send / Generate Message
+      const handleSendMessage = async () => {
+        const trimmedInput = userPrompt.trim();
+        if (!trimmedInput) return;
+        if (!apiKey || !isConnected) {
+          setIsKeyModalOpen(true);
+          return;
+        }
+
+        const userMsg = {
+          id: 'user-' + Date.now(),
+          role: 'user',
+          content: trimmedInput,
+          timestamp: Date.now()
+        };
+
+        const updatedHistory = [...messages, userMsg];
+        setMessages(updatedHistory);
+        setUserPrompt('');
+        setIsGenerating(true);
+        setStreamingDelta('');
+        setStreamingStats(null);
+
+        // Web Search Step (if enabled)
+        let foundSources = [];
+        if (webSearchEnabled) {
+          setIsSearching(true);
+          foundSources = await performWebSearch(trimmedInput);
+          setIsSearching(false);
+          setActiveSources(foundSources);
+        } else {
+          setActiveSources([]);
+        }
+
+        // Build Payload
+        const apiMessages = [];
+
+        // 1. System Prompt + Search Context
+        let finalSysPrompt = systemPrompt.trim();
+        if (foundSources.length > 0) {
+          const searchBlock = foundSources.map((s, idx) => 
+            `[${idx + 1}] Title: ${s.title}\nURL: ${s.url}\nExcerpt: ${s.snippet}`
+          ).join('\n\n');
+          finalSysPrompt += `\n\n[LIVE SEARCH SOURCES]\n${searchBlock}\n\nInstructions: Use these real-world sources to answer accurately. Cite sources in your response using bracketed numbers like [1], [2] matching the references above.`;
+        }
+
+        if (finalSysPrompt) {
+          apiMessages.push({ role: 'system', content: finalSysPrompt });
+        }
+
+        // 2. Few-shot Examples from Left Sidebar
+        examples.forEach(ex => {
+          if (ex.userInput.trim() && ex.assistantResponse.trim()) {
+            apiMessages.push({ role: 'user', content: ex.userInput.trim() });
+            apiMessages.push({ role: 'assistant', content: ex.assistantResponse.trim() });
+          }
+        });
+
+        // 3. User History
+        updatedHistory.forEach(m => {
+          apiMessages.push({ role: m.role, content: m.content });
+        });
+
+        // Initialize Abort Controller
+        abortControllerRef.current = new AbortController();
+        const signal = abortControllerRef.current.signal;
+        const startTime = performance.now();
+        let fullGeneratedText = '';
+
+        try {
+          const reqBody = {
+            model: selectedModel,
+            messages: apiMessages,
+            temperature: parameters.temperature,
+            max_tokens: parameters.maxTokens,
+            top_p: parameters.topP,
+            frequency_penalty: parameters.frequencyPenalty,
+            presence_penalty: parameters.presencePenalty,
+            stream: parameters.stream
+          };
+
+          if (parameters.stream) {
+            reqBody.stream_options = { include_usage: true };
+          }
+
+          const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${apiKey.trim()}`,
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(reqBody),
+            signal
+          });
+
+          if (!response.ok) {
+            const errText = await response.text();
+            let msg = `API Error ${response.status}: ${response.statusText}`;
+            try {
+              const j = JSON.parse(errText);
+              msg = j.error?.message || msg;
+            } catch (e) {}
+            throw new Error(msg);
+          }
+
+          // Non-Streaming Mode
+          if (!parameters.stream) {
+            const data = await response.json();
+            const text = data.choices?.[0]?.message?.content || '';
+            const totalDurationSec = (performance.now() - startTime) / 1000;
+            const completionTokens = data.usage?.completion_tokens || Math.round(text.length / 4);
+
+            const stats = {
+              tokens: completionTokens,
+              duration: totalDurationSec.toFixed(2),
+              tps: Math.round(completionTokens / (totalDurationSec || 0.001))
+            };
+
+            setMessages([...updatedHistory, {
+              id: 'assistant-' + Date.now(),
+              role: 'assistant',
+              content: text,
+              timestamp: Date.now(),
+              sources: foundSources,
+              stats
+            }]);
+            setIsGenerating(false);
+            return;
+          }
+
+          // Streaming Mode (SSE)
+          const reader = response.body.getReader();
+          const decoder = new TextDecoder('utf-8');
+          let buffer = '';
+          let usageData = null;
+
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+
+            buffer += decoder.decode(value, { stream: true });
+            const lines = buffer.split('\n');
+            buffer = lines.pop() || '';
+
+            for (const line of lines) {
+              const t = line.trim();
+              if (!t || t.startsWith(':')) continue;
+              if (t === 'data: [DONE]') continue;
+
+              if (t.startsWith('data: ')) {
+                try {
+                  const chunk = JSON.parse(t.slice(6));
+                  const delta = chunk.choices?.[0]?.delta?.content;
+                  if (delta) {
+                    fullGeneratedText += delta;
+                    setStreamingDelta(fullGeneratedText);
+                  }
+                  if (chunk.usage) {
+                    usageData = chunk.usage;
+                  }
+                } catch (e) {}
+              }
+            }
+          }
+
+          const totalDurationSec = (performance.now() - startTime) / 1000;
+          const tokensCount = usageData?.completion_tokens || Math.max(1, Math.round(fullGeneratedText.length / 3.8));
+          const tps = Math.round(tokensCount / (usageData?.completion_time || totalDurationSec || 0.001));
+
+          const finalStats = {
+            tokens: tokensCount,
+            duration: (usageData?.completion_time || totalDurationSec).toFixed(2),
+            tps
+          };
+
+          setMessages([...updatedHistory, {
+            id: 'assistant-' + Date.now(),
+            role: 'assistant',
+            content: fullGeneratedText,
+            timestamp: Date.now(),
+            sources: foundSources,
+            stats: finalStats
+          }]);
+          setStreamingDelta('');
+          setStreamingStats(null);
+        } catch (err) {
+          if (err.name === 'AbortError') {
+            // User stopped generation gracefully
+            if (fullGeneratedText) {
+              setMessages([...updatedHistory, {
+                id: 'assistant-' + Date.now(),
+                role: 'assistant',
+                content: fullGeneratedText + ' \n\n*(Generation stopped by user)*',
+                timestamp: Date.now(),
+                sources: foundSources
+              }]);
+            }
+          } else {
+            // Append error message to chat
+            setMessages([...updatedHistory, {
+              id: 'error-' + Date.now(),
+              role: 'assistant',
+              content: `⚠️ **Groq Error:** ${err.message}`,
+              timestamp: Date.now(),
+              isError: true
+            }]);
+          }
+          setStreamingDelta('');
+        } finally {
+          setIsGenerating(false);
+          setIsSearching(false);
+          abortControllerRef.current = null;
+        }
+      };
+
+      // Copy text helper
+      const [copiedChatId, setCopiedChatId] = useState(null);
+      const handleCopyText = (text, id) => {
+        navigator.clipboard.writeText(text);
+        setCopiedChatId(id);
+        setTimeout(() => setCopiedChatId(null), 2000);
+      };
+
+      return (
+        <div className="flex flex-col h-screen bg-[#090a0f] text-gray-200">
+          
+          {/* HEADER BAR */}
+          <header className="flex items-center justify-between px-4 lg:px-6 py-2.5 bg-[#10121a] border-b border-groq-border shrink-0 z-20">
+            <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2">
+                <IconGroq />
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="font-bold text-white text-sm tracking-wide">GROQ</span>
+                    <span className="px-1.5 py-0.5 rounded text-[10px] font-mono font-semibold bg-orange-500/20 text-orange-400 border border-orange-500/30">
+                      PLAYGROUND
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-gray-400 hidden sm:block">Ultra-Fast LPU Inference Studio</p>
+                </div>
+              </div>
+
+              {/* Active Prompting Technique Badge in Header */}
+              <div className={`hidden md:flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-xs font-semibold ${technique.badgeBg} ${technique.badgeBorder} ${technique.badgeText} transition-all`}>
+                <span className="w-1.5 h-1.5 rounded-full bg-current animate-pulse"></span>
+                <span>{technique.label}</span>
+                <span className="text-[10px] text-gray-400 font-normal">({examples.length} {examples.length === 1 ? 'example' : 'examples'})</span>
+              </div>
+            </div>
+
+            {/* Header Right Actions */}
+            <div className="flex items-center gap-2 sm:gap-3">
+              {/* Web Search Quick Indicator */}
+              <button
+                onClick={() => setWebSearchEnabled(!webSearchEnabled)}
+                className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium border transition-colors ${
+                  webSearchEnabled
+                    ? 'bg-emerald-500/15 border-emerald-500/40 text-emerald-400 shadow-sm shadow-emerald-500/10'
+                    : 'bg-groq-panel border-groq-border text-gray-400 hover:text-gray-300'
+                }`}
+                title="Toggle Web Search"
+              >
+                <IconGlobe className={`w-3.5 h-3.5 ${webSearchEnabled ? 'text-emerald-400 animate-spin-slow' : 'text-gray-400'}`} />
+                <span className="hidden sm:inline">Web Search:</span>
+                <span className="font-semibold">{webSearchEnabled ? 'ON' : 'OFF'}</span>
+              </button>
+
+              {/* Code Export Button */}
+              <button
+                onClick={() => setIsCodeModalOpen(true)}
+                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium bg-groq-card hover:bg-[#1f2333] border border-groq-border text-gray-300 hover:text-white transition-colors"
+                title="Export Code (cURL, Python, JS)"
+              >
+                <IconCode className="w-3.5 h-3.5 text-purple-400" />
+                <span className="hidden sm:inline">View Code</span>
+              </button>
+
+              {/* API Key Status Pill & Button */}
+              <button
+                onClick={() => setIsKeyModalOpen(true)}
+                className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors ${
+                  isConnected
+                    ? 'bg-[#121924] border-emerald-500/30 text-emerald-300 hover:bg-[#162232]'
+                    : 'bg-red-500/15 border-red-500/40 text-red-300 hover:bg-red-500/25 pulse-glow'
+                }`}
+              >
+                <span className={`w-2 h-2 rounded-full ${isConnected ? 'bg-emerald-400' : 'bg-red-400 animate-ping'}`} />
+                <span className="font-semibold">{isConnected ? 'Connected' : 'Connect Key'}</span>
+                <IconKey className="w-3.5 h-3.5 opacity-70" />
+              </button>
+            </div>
+          </header>
+
+          {/* MOBILE NAVIGATION TABS (Visible on screens < lg) */}
+          <div className="flex lg:hidden bg-groq-panel border-b border-groq-border text-xs font-medium">
+            <button
+              onClick={() => setActiveMobileTab('examples')}
+              className={`flex-1 py-2 text-center border-b-2 transition-colors ${
+                activeMobileTab === 'examples' ? 'border-orange-500 text-orange-400 bg-orange-500/10' : 'border-transparent text-gray-400'
+              }`}
+            >
+              Examples ({examples.length})
+            </button>
+            <button
+              onClick={() => setActiveMobileTab('playground')}
+              className={`flex-1 py-2 text-center border-b-2 transition-colors ${
+                activeMobileTab === 'playground' ? 'border-orange-500 text-orange-400 bg-orange-500/10' : 'border-transparent text-gray-400'
+              }`}
+            >
+              Playground
+            </button>
+            <button
+              onClick={() => setActiveMobileTab('parameters')}
+              className={`flex-1 py-2 text-center border-b-2 transition-colors ${
+                activeMobileTab === 'parameters' ? 'border-orange-500 text-orange-400 bg-orange-500/10' : 'border-transparent text-gray-400'
+              }`}
+            >
+              Parameters
+            </button>
+          </div>
+
+          {/* THREE-COLUMN MAIN WORKSPACE */}
+          <div className="flex-1 flex overflow-hidden">
+            
+            {/* ========================================================= */}
+            {/* LEFT SIDEBAR: Prompt Examples & System Prompt             */}
+            {/* ========================================================= */}
+            <aside className={`w-full lg:w-80 xl:w-96 bg-[#0d0f17] border-r border-groq-border flex flex-col shrink-0 overflow-y-auto ${
+              activeMobileTab === 'examples' ? 'block' : 'hidden lg:flex'
+            }`}>
+              
+              {/* Sidebar Header with Prompting Technique Box */}
+              <div className="p-4 border-b border-groq-border bg-[#10131e] space-y-3">
+                <div className="flex items-center justify-between">
+                  <h2 className="text-xs font-bold uppercase tracking-wider text-gray-300">Prompting Mode</h2>
+                  <span className="text-[11px] font-mono text-gray-400">{examples.length} {examples.length === 1 ? 'Example' : 'Examples'}</span>
+                </div>
+
+                {/* Prompting Technique Highlight Card */}
+                <div className={`p-3 rounded-lg border ${technique.badgeBg} ${technique.badgeBorder} transition-all`}>
+                  <div className="flex items-center justify-between mb-1">
+                    <span className={`text-xs font-bold ${technique.badgeText} flex items-center gap-1.5`}>
+                      <span className="w-2 h-2 rounded-full bg-current"></span>
+                      {technique.label} Prompting
+                    </span>
+                    <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-black/40 text-gray-300 border border-white/10">
+                      {examples.length} shot
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-gray-300 leading-snug">{technique.desc}</p>
+                </div>
+
+                {/* Preset Templates Selector */}
+                <div>
+                  <label className="block text-[11px] font-semibold text-gray-400 mb-1">Load Preset Template</label>
+                  <select
+                    onChange={(e) => {
+                      if (e.target.value) loadPreset(e.target.value);
+                      e.target.value = '';
+                    }}
+                    defaultValue=""
+                    className="w-full px-2.5 py-1.5 bg-[#161a26] border border-groq-border rounded-lg text-xs text-gray-300 focus:outline-none focus:border-orange-500 cursor-pointer"
+                  >
+                    <option value="" disabled>-- Select an example preset --</option>
+                    <option value="sentiment">Sentiment Analysis (3 Examples → Few-shot)</option>
+                    <option value="codeTranslation">Python to TypeScript (1 Example → One-shot)</option>
+                    <option value="jsonExtractor">Meeting Notes Extractor (2 Examples → Few-shot)</option>
+                    <option value="zeroShot">Clear to Zero-shot (0 Examples)</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* System Prompt Section */}
+              <div className="p-4 border-b border-groq-border space-y-2">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-semibold text-gray-300 flex items-center gap-1.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-purple-400"></span>
+                    System Prompt
+                  </label>
+                  <span className="text-[10px] text-gray-400">Behavior & Persona</span>
+                </div>
+                <textarea
+                  value={systemPrompt}
+                  onChange={(e) => setSystemPrompt(e.target.value)}
+                  rows={3}
+                  placeholder="Set instructions for model tone, formatting, constraints..."
+                  className="w-full px-3 py-2 bg-[#141724] border border-groq-border rounded-lg text-xs text-white placeholder-gray-500 focus:outline-none focus:border-orange-500 font-sans resize-y"
+                />
+              </div>
+
+              {/* Few-Shot Examples Section */}
+              <div className="flex-1 p-4 space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-xs font-bold uppercase tracking-wider text-gray-300">Examples</span>
+                    <span className="px-1.5 py-0.2 rounded-full text-[10px] font-mono bg-groq-card border border-groq-border text-gray-300">
+                      {examples.length}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    {examples.length > 0 && (
+                      <button
+                        onClick={clearAllExamples}
+                        className="px-2 py-1 text-[11px] text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded transition-colors"
+                        title="Clear all examples"
+                      >
+                        Clear
+                      </button>
+                    )}
+                    <button
+                      onClick={addExample}
+                      className="flex items-center gap-1 px-2.5 py-1 text-xs font-semibold text-orange-400 bg-orange-500/15 hover:bg-orange-500/25 border border-orange-500/30 rounded-lg transition-colors cursor-pointer"
+                    >
+                      <IconPlus className="w-3.5 h-3.5" />
+                      Add Example
+                    </button>
+                  </div>
+                </div>
+
+                {/* Empty State */}
+                {examples.length === 0 && (
+                  <div className="p-4 rounded-xl border border-dashed border-groq-border text-center space-y-2 bg-[#12141e]/50">
+                    <p className="text-xs text-gray-400">Currently in <strong className="text-cyan-400">Zero-shot</strong> mode.</p>
+                    <p className="text-[11px] text-gray-500">Add an example to switch to <strong className="text-amber-400">One-shot</strong>, or 2+ for <strong className="text-emerald-400">Few-shot</strong>.</p>
+                    <button
+                      onClick={addExample}
+                      className="mt-2 inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-white bg-groq-card hover:bg-gray-800 border border-groq-border rounded-lg transition-colors"
+                    >
+                      <IconPlus className="w-3.5 h-3.5 text-orange-400" />
+                      Add First Example
+                    </button>
+                  </div>
+                )}
+
+                {/* Example Cards List */}
+                <div className="space-y-3">
+                  {examples.map((ex, idx) => (
+                    <div key={ex.id} className="p-3 bg-[#131622] border border-groq-border rounded-xl space-y-2.5 relative group hover:border-gray-700 transition-colors">
+                      <div className="flex items-center justify-between text-[11px] text-gray-400">
+                        <span className="font-semibold text-gray-300 flex items-center gap-1.5">
+                          <span className="w-4 h-4 rounded-full bg-orange-500/20 text-orange-400 text-[10px] flex items-center justify-center font-bold">
+                            {idx + 1}
+                          </span>
+                          Example Pair
+                        </span>
+                        <button
+                          onClick={() => deleteExample(ex.id)}
+                          className="p-1 rounded text-gray-500 hover:text-red-400 hover:bg-red-500/10 transition-colors"
+                          title="Delete example"
+                        >
+                          <IconTrash className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+
+                      {/* User Input in Example */}
+                      <div className="space-y-1">
+                        <span className="text-[10px] font-semibold uppercase tracking-wider text-cyan-400">User Input</span>
+                        <textarea
+                          value={ex.userInput}
+                          onChange={(e) => updateExample(ex.id, 'userInput', e.target.value)}
+                          rows={2}
+                          placeholder="Example user question/prompt..."
+                          className="w-full px-2.5 py-1.5 bg-[#171b29] border border-groq-border rounded-lg text-xs text-white placeholder-gray-500 focus:outline-none focus:border-cyan-500 font-sans"
+                        />
+                      </div>
+
+                      {/* Expected Assistant Response */}
+                      <div className="space-y-1">
+                        <span className="text-[10px] font-semibold uppercase tracking-wider text-emerald-400">Expected Assistant Output</span>
+                        <textarea
+                          value={ex.assistantResponse}
+                          onChange={(e) => updateExample(ex.id, 'assistantResponse', e.target.value)}
+                          rows={2}
+                          placeholder="Expected model response..."
+                          className="w-full px-2.5 py-1.5 bg-[#171b29] border border-groq-border rounded-lg text-xs text-white placeholder-gray-500 focus:outline-none focus:border-emerald-500 font-sans"
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </aside>
+
+            {/* ========================================================= */}
+            {/* CENTER PANEL: Main AI Playground                          */}
+            {/* ========================================================= */}
+            <main className={`flex-1 flex flex-col bg-[#090a0f] overflow-hidden ${
+              activeMobileTab === 'playground' ? 'flex' : 'hidden lg:flex'
+            }`}>
+              
+              {/* Center Panel Top Toolbar */}
+              <div className="flex flex-wrap items-center justify-between gap-3 px-4 lg:px-6 py-2.5 bg-[#11131c] border-b border-groq-border shrink-0">
+                
+                {/* Model Selector */}
+                <div className="flex items-center gap-2">
+                  <label className="text-xs font-semibold text-gray-400">Model:</label>
+                  <div className="relative">
+                    <select
+                      value={selectedModel}
+                      onChange={(e) => setSelectedModel(e.target.value)}
+                      className="px-3 py-1.5 bg-[#161a26] border border-groq-border rounded-lg text-xs font-semibold text-white focus:outline-none focus:border-orange-500 cursor-pointer pr-8"
+                    >
+                      {models.map(m => (
+                        <option key={m.id} value={m.id}>
+                          {m.name || m.id} ({m.context})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                {/* Center Controls: Web Search & Clear Conversation */}
+                <div className="flex items-center gap-2.5">
+                  <div className="flex items-center gap-2 px-2.5 py-1 rounded-lg bg-groq-card border border-groq-border text-xs">
+                    <IconGlobe className={`w-3.5 h-3.5 ${webSearchEnabled ? 'text-emerald-400' : 'text-gray-500'}`} />
+                    <span className="text-gray-400 text-[11px]">Search:</span>
+                    <button
+                      onClick={() => setWebSearchEnabled(!webSearchEnabled)}
+                      className={`relative inline-flex h-4 w-8 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                        webSearchEnabled ? 'bg-emerald-500' : 'bg-gray-700'
+                      }`}
+                    >
+                      <span className={`pointer-events-none inline-block h-3 w-3 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                        webSearchEnabled ? 'translate-x-4' : 'translate-x-0'
+                      }`} />
+                    </button>
+                  </div>
+
+                  <button
+                    onClick={handleClearConversation}
+                    className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium text-gray-400 hover:text-white hover:bg-gray-800 transition-colors"
+                    title="Clear chat history"
+                  >
+                    <IconRotateCcw className="w-3.5 h-3.5" />
+                    <span>Clear</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Chat & Messages Area */}
+              <div className="flex-1 overflow-y-auto p-4 lg:p-6 space-y-4">
+                
+                {/* Active Context Banner */}
+                <div className="flex flex-wrap items-center justify-between gap-2 p-2.5 rounded-lg bg-[#111420] border border-groq-border text-xs text-gray-400">
+                  <div className="flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full bg-orange-400"></span>
+                    <span>System Prompt: <strong className="text-gray-200">{systemPrompt.slice(0, 45)}...</strong></span>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <span>Few-shot examples in request: <strong className="text-white">{examples.length}</strong></span>
+                    {webSearchEnabled && (
+                      <span className="text-emerald-400 flex items-center gap-1">
+                        <IconGlobe className="w-3 h-3" /> Live Search Active
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                {/* Empty State when no messages */}
+                {messages.length === 0 && !isGenerating && !streamingDelta && (
+                  <div className="py-12 text-center max-w-md mx-auto space-y-3">
+                    <div className="w-12 h-12 rounded-2xl bg-orange-500/10 border border-orange-500/20 text-orange-400 flex items-center justify-center mx-auto">
+                      <IconZap className="w-6 h-6" />
+                    </div>
+                    <h3 className="text-sm font-bold text-white">Groq AI Playground Ready</h3>
+                    <p className="text-xs text-gray-400 leading-relaxed">
+                      Experiment with prompts, adjust temperature and token parameters, or add prompt examples in the left sidebar to switch between <strong>Zero-shot</strong>, <strong>One-shot</strong>, and <strong>Few-shot</strong> prompting.
+                    </p>
+                    <div className="pt-2 flex flex-wrap justify-center gap-2 text-[11px]">
+                      <button
+                        onClick={() => setUserPrompt('Explain quantum computing in one short paragraph.')}
+                        className="px-2.5 py-1 rounded bg-[#161a26] border border-groq-border text-gray-300 hover:text-white hover:border-gray-600 transition-colors"
+                      >
+                        "Explain quantum computing..."
+                      </button>
+                      <button
+                        onClick={() => setUserPrompt('Compare Groq LPU with NVIDIA H100 for inference latency.')}
+                        className="px-2.5 py-1 rounded bg-[#161a26] border border-groq-border text-gray-300 hover:text-white hover:border-gray-600 transition-colors"
+                      >
+                        "Groq LPU vs H100..."
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Conversation Messages */}
+                {messages.map((msg) => (
+                  <div
+                    key={msg.id}
+                    className={`flex flex-col space-y-2 rounded-xl p-4 border transition-all ${
+                      msg.role === 'user'
+                        ? 'bg-[#151926] border-blue-500/20 ml-6 lg:ml-12'
+                        : msg.isError
+                        ? 'bg-red-500/10 border-red-500/30'
+                        : 'bg-[#111420] border-groq-border mr-6 lg:mr-12 shadow-md'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between text-xs text-gray-400 border-b border-white/5 pb-2">
+                      <div className="flex items-center gap-2">
+                        {msg.role === 'user' ? (
+                          <span className="font-bold text-blue-400 flex items-center gap-1.5">
+                            <span className="w-2 h-2 rounded-full bg-blue-400"></span>
+                            User
+                          </span>
+                        ) : (
+                          <span className="font-bold text-orange-400 flex items-center gap-1.5">
+                            <IconGroq />
+                            Groq Assistant ({selectedModel})
+                          </span>
+                        )}
+                        <span className="text-[10px] text-gray-500">
+                          {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        </span>
+                      </div>
+
+                      {/* Message Actions */}
+                      <div className="flex items-center gap-2">
+                        {msg.stats && (
+                          <div className="flex items-center gap-1.5 px-2 py-0.5 rounded bg-black/40 text-[10px] font-mono text-emerald-400 border border-emerald-500/20">
+                            <IconZap className="w-3 h-3 text-emerald-400" />
+                            <span>{msg.stats.tps} tok/s</span>
+                            <span className="text-gray-500">•</span>
+                            <span>{msg.stats.duration}s</span>
+                          </div>
+                        )}
+                        <button
+                          onClick={() => handleCopyText(msg.content, msg.id)}
+                          className="flex items-center gap-1 px-2 py-0.5 rounded text-gray-400 hover:text-white hover:bg-gray-800 transition-colors text-[11px]"
+                          title="Copy response"
+                        >
+                          {copiedChatId === msg.id ? (
+                            <>
+                              <IconCheck className="w-3.5 h-3.5 text-emerald-400" />
+                              <span className="text-emerald-400 text-[11px]">Copied</span>
+                            </>
+                          ) : (
+                            <>
+                              <IconCopy className="w-3.5 h-3.5" />
+                              <span className="text-[11px]">Copy</span>
+                            </>
+                          )}
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Message Content */}
+                    <div className="pt-1">
+                      <MarkdownRenderer content={msg.content} />
+                    </div>
+
+                    {/* Sources Cards (if web search was used) */}
+                    {msg.sources && msg.sources.length > 0 && (
+                      <div className="mt-3 pt-3 border-t border-groq-border space-y-2">
+                        <div className="flex items-center gap-1.5 text-xs font-semibold text-purple-300">
+                          <IconGlobe className="w-3.5 h-3.5 text-purple-400" />
+                          <span>Sources & Citations ({msg.sources.length})</span>
+                        </div>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                          {msg.sources.map((s, sIdx) => (
+                            <a
+                              key={sIdx}
+                              href={s.url}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="p-2 rounded-lg bg-[#0e1018] border border-purple-500/20 hover:border-purple-500/50 hover:bg-[#141724] transition-colors block text-left group"
+                            >
+                              <div className="flex items-center justify-between text-[11px] font-semibold text-gray-200 group-hover:text-purple-300 truncate">
+                                <span className="flex items-center gap-1 truncate">
+                                  <span className="w-4 h-4 rounded bg-purple-500/20 text-purple-300 text-[10px] flex items-center justify-center font-mono">
+                                    {sIdx + 1}
+                                  </span>
+                                  {s.title}
+                                </span>
+                                <IconExternalLink className="w-3 h-3 text-gray-500 shrink-0" />
+                              </div>
+                              <p className="text-[10px] text-gray-400 mt-1 line-clamp-2 leading-tight">
+                                {s.snippet}
+                              </p>
+                            </a>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ))}
+
+                {/* Real-time Web Search Loading Indicator */}
+                {isSearching && (
+                  <div className="p-3.5 rounded-xl bg-purple-950/20 border border-purple-500/30 flex items-center gap-3 mr-12 text-xs text-purple-300 animate-pulse">
+                    <IconGlobe className="w-4 h-4 text-purple-400 animate-spin" />
+                    <span>Searching live web sources for factual information...</span>
+                  </div>
+                )}
+
+                {/* Real-time Streaming Response Display */}
+                {isGenerating && streamingDelta && (
+                  <div className="flex flex-col space-y-2 rounded-xl p-4 bg-[#111420] border border-orange-500/30 mr-6 lg:mr-12 shadow-lg">
+                    <div className="flex items-center justify-between text-xs text-gray-400 border-b border-white/5 pb-2">
+                      <span className="font-bold text-orange-400 flex items-center gap-1.5">
+                        <IconGroq />
+                        Groq Streaming...
+                      </span>
+                      <span className="text-[10px] text-orange-400 font-mono animate-pulse">
+                        ⚡ Streaming inference
+                      </span>
+                    </div>
+                    <div className="pt-1">
+                      <MarkdownRenderer content={streamingDelta} />
+                      <span className="cursor-blink"></span>
+                    </div>
+                  </div>
+                )}
+
+                {/* Loading animation before tokens arrive */}
+                {isGenerating && !streamingDelta && !isSearching && (
+                  <div className="p-4 rounded-xl bg-[#111420] border border-groq-border flex items-center gap-3 mr-12 text-xs text-gray-400">
+                    <div className="flex gap-1.5">
+                      <span className="w-2 h-2 rounded-full bg-orange-500 animate-bounce"></span>
+                      <span className="w-2 h-2 rounded-full bg-orange-500 animate-bounce [animation-delay:0.15s]"></span>
+                      <span className="w-2 h-2 rounded-full bg-orange-500 animate-bounce [animation-delay:0.3s]"></span>
+                    </div>
+                    <span>Groq LPU initializing response...</span>
+                  </div>
+                )}
+
+                <div ref={chatEndRef} />
+              </div>
+
+              {/* Bottom Prompt Editor & Input Area */}
+              <div className="p-4 lg:p-6 bg-[#0e1017] border-t border-groq-border shrink-0">
+                <div className="relative rounded-xl border border-groq-border bg-[#141724] focus-within:border-orange-500/80 focus-within:ring-1 focus-within:ring-orange-500/50 transition-all shadow-lg">
+                  <textarea
+                    value={userPrompt}
+                    onChange={(e) => setUserPrompt(e.target.value)}
+                    onKeyDown={(e) => {
+                      if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
+                        e.preventDefault();
+                        if (!isGenerating) handleSendMessage();
+                      }
+                    }}
+                    rows={3}
+                    placeholder="Type your prompt here... (Press Cmd+Enter or Ctrl+Enter to generate)"
+                    className="w-full px-4 pt-3 pb-12 bg-transparent text-sm text-white placeholder-gray-500 focus:outline-none resize-none font-sans"
+                  />
+
+                  {/* Input Toolbar */}
+                  <div className="absolute left-3 right-3 bottom-2.5 flex items-center justify-between">
+                    <div className="flex items-center gap-2 text-[11px] text-gray-500">
+                      <span>Press <kbd className="px-1 py-0.5 rounded bg-black/40 text-gray-400 font-mono">⌘/Ctrl + Enter</kbd></span>
+                      <span className="hidden sm:inline">• Examples injected: <strong className="text-gray-300">{examples.length}</strong></span>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      {isGenerating ? (
+                        <button
+                          onClick={handleStopGeneration}
+                          className="flex items-center gap-1.5 px-4 py-2 text-xs font-semibold text-white bg-red-600 hover:bg-red-700 active:scale-95 rounded-lg shadow-md transition-all cursor-pointer"
+                        >
+                          <IconSquare className="w-3.5 h-3.5" />
+                          <span>Stop</span>
+                        </button>
+                      ) : (
+                        <button
+                          onClick={handleSendMessage}
+                          disabled={!userPrompt.trim()}
+                          className="flex items-center gap-1.5 px-5 py-2 text-xs font-bold text-white gradient-groq hover:brightness-110 active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed rounded-lg shadow-lg shadow-orange-500/20 transition-all cursor-pointer"
+                        >
+                          <IconPlay className="w-3.5 h-3.5" />
+                          <span>Generate</span>
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </main>
+
+            {/* ========================================================= */}
+            {/* RIGHT SIDEBAR: Model Parameters Settings                  */}
+            {/* ========================================================= */}
+            <aside className={`w-full lg:w-72 xl:w-80 bg-[#0d0f17] border-l border-groq-border flex flex-col shrink-0 overflow-y-auto ${
+              activeMobileTab === 'parameters' ? 'block' : 'hidden lg:flex'
+            }`}>
+              
+              <div className="p-4 border-b border-groq-border bg-[#10131e] flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <IconSliders className="w-4 h-4 text-orange-400" />
+                  <h2 className="text-xs font-bold uppercase tracking-wider text-gray-200">Model Parameters</h2>
+                </div>
+                <button
+                  onClick={() => setParameters({
+                    temperature: 0.7,
+                    maxTokens: 2048,
+                    topP: 1.0,
+                    frequencyPenalty: 0.0,
+                    presencePenalty: 0.0,
+                    stream: true
+                  })}
+                  className="text-[11px] text-gray-400 hover:text-orange-400 transition-colors"
+                  title="Reset to defaults"
+                >
+                  Reset
+                </button>
+              </div>
+
+              <div className="p-4 space-y-6 flex-1 text-xs">
+                
+                {/* 1. TEMPERATURE */}
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <label className="font-semibold text-gray-200">Temperature</label>
+                    <span className="font-mono text-orange-400 font-bold px-1.5 py-0.5 rounded bg-black/40 border border-groq-border">
+                      {parameters.temperature}
+                    </span>
+                  </div>
+                  <input
+                    type="range"
+                    min="0"
+                    max="2"
+                    step="0.05"
+                    value={parameters.temperature}
+                    onChange={(e) => setParameters({ ...parameters, temperature: parseFloat(e.target.value) })}
+                    className="w-full accent-orange-500 cursor-pointer"
+                  />
+                  <p className="text-[11px] text-gray-400 leading-tight">
+                    Controls response randomness. Lower values are deterministic and focused; higher values are creative.
+                  </p>
+                </div>
+
+                {/* 2. MAXIMUM TOKENS */}
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <label className="font-semibold text-gray-200">Max Tokens</label>
+                    <input
+                      type="number"
+                      min="1"
+                      max="8192"
+                      value={parameters.maxTokens}
+                      onChange={(e) => setParameters({ ...parameters, maxTokens: parseInt(e.target.value) || 100 })}
+                      className="w-20 px-2 py-0.5 bg-black/40 border border-groq-border rounded font-mono text-orange-400 font-bold text-right text-xs focus:outline-none focus:border-orange-500"
+                    />
+                  </div>
+                  <input
+                    type="range"
+                    min="64"
+                    max="8192"
+                    step="64"
+                    value={parameters.maxTokens}
+                    onChange={(e) => setParameters({ ...parameters, maxTokens: parseInt(e.target.value) })}
+                    className="w-full accent-orange-500 cursor-pointer"
+                  />
+                  <p className="text-[11px] text-gray-400 leading-tight">
+                    Controls the maximum response length. Token limits are respected per model context window.
+                  </p>
+                </div>
+
+                {/* 3. TOP P */}
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <label className="font-semibold text-gray-200">Top P</label>
+                    <span className="font-mono text-orange-400 font-bold px-1.5 py-0.5 rounded bg-black/40 border border-groq-border">
+                      {parameters.topP}
+                    </span>
+                  </div>
+                  <input
+                    type="range"
+                    min="0"
+                    max="1"
+                    step="0.05"
+                    value={parameters.topP}
+                    onChange={(e) => setParameters({ ...parameters, topP: parseFloat(e.target.value) })}
+                    className="w-full accent-orange-500 cursor-pointer"
+                  />
+                  <p className="text-[11px] text-gray-400 leading-tight">
+                    Nucleus sampling: considers tokens comprising the top P probability mass. Alternative to temperature.
+                  </p>
+                </div>
+
+                {/* 4. FREQUENCY PENALTY */}
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <label className="font-semibold text-gray-200">Frequency Penalty</label>
+                    <span className="font-mono text-orange-400 font-bold px-1.5 py-0.5 rounded bg-black/40 border border-groq-border">
+                      {parameters.frequencyPenalty}
+                    </span>
+                  </div>
+                  <input
+                    type="range"
+                    min="-2"
+                    max="2"
+                    step="0.1"
+                    value={parameters.frequencyPenalty}
+                    onChange={(e) => setParameters({ ...parameters, frequencyPenalty: parseFloat(e.target.value) })}
+                    className="w-full accent-orange-500 cursor-pointer"
+                  />
+                  <p className="text-[11px] text-gray-400 leading-tight">
+                    Penalizes tokens based on their frequency in text so far, reducing verbatim repetition.
+                  </p>
+                </div>
+
+                {/* 5. PRESENCE PENALTY */}
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <label className="font-semibold text-gray-200">Presence Penalty</label>
+                    <span className="font-mono text-orange-400 font-bold px-1.5 py-0.5 rounded bg-black/40 border border-groq-border">
+                      {parameters.presencePenalty}
+                    </span>
+                  </div>
+                  <input
+                    type="range"
+                    min="-2"
+                    max="2"
+                    step="0.1"
+                    value={parameters.presencePenalty}
+                    onChange={(e) => setParameters({ ...parameters, presencePenalty: parseFloat(e.target.value) })}
+                    className="w-full accent-orange-500 cursor-pointer"
+                  />
+                  <p className="text-[11px] text-gray-400 leading-tight">
+                    Penalizes tokens based on whether they appear in text at all, encouraging novel topics.
+                  </p>
+                </div>
+
+                {/* 6. STREAMING TOGGLE */}
+                <div className="pt-2 border-t border-groq-border flex items-center justify-between">
+                  <div>
+                    <label className="font-semibold text-gray-200 block">Stream Output</label>
+                    <span className="text-[10px] text-gray-400">Stream tokens in real-time</span>
+                  </div>
+                  <button
+                    onClick={() => setParameters({ ...parameters, stream: !parameters.stream })}
+                    className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out ${
+                      parameters.stream ? 'bg-orange-500' : 'bg-gray-700'
+                    }`}
+                  >
+                    <span className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                      parameters.stream ? 'translate-x-4' : 'translate-x-0'
+                    }`} />
+                  </button>
+                </div>
+
+                {/* Active Model Info Card */}
+                <div className="p-3 rounded-lg bg-[#121520] border border-groq-border space-y-1.5 text-[11px]">
+                  <span className="font-bold text-gray-300 block">Active Model Specs</span>
+                  <div className="flex justify-between text-gray-400">
+                    <span>ID:</span>
+                    <span className="font-mono text-white text-[10px] truncate max-w-[150px]">{selectedModel}</span>
+                  </div>
+                  <div className="flex justify-between text-gray-400">
+                    <span>Architecture:</span>
+                    <span className="text-gray-300 font-mono">Groq LPU Tensor</span>
+                  </div>
+                  <div className="flex justify-between text-gray-400">
+                    <span>Context Window:</span>
+                    <span className="text-orange-400 font-mono">128,000 tokens</span>
+                  </div>
+                </div>
+
+              </div>
+            </aside>
+          </div>
+
+          {/* ========================================================= */}
+          {/* API KEY CONNECTION MODAL                                  */}
+          {/* ========================================================= */}
+          {isKeyModalOpen && (
+            <ApiKeyModalComponent
+              isOpen={isKeyModalOpen}
+              onClose={() => setIsKeyModalOpen(false)}
+              currentKey={apiKey}
+              isConnected={isConnected}
+              onConnect={handleConnectKey}
+              onDisconnect={handleDisconnect}
+            />
+          )}
+
+          {/* ========================================================= */}
+          {/* CODE EXPORT MODAL                                         */}
+          {/* ========================================================= */}
+          {isCodeModalOpen && (
+            <CodeExportModalComponent
+              isOpen={isCodeModalOpen}
+              onClose={() => setIsCodeModalOpen(false)}
+              model={selectedModel}
+              systemPrompt={systemPrompt}
+              examples={examples}
+              userPrompt={userPrompt}
+              parameters={parameters}
+            />
+          )}
+
+        </div>
+      );
+    }
+
+    // --- API KEY MODAL COMPONENT ---
+    function ApiKeyModalComponent({ isOpen, onClose, currentKey, isConnected, onConnect, onDisconnect }) {
+      const [inputKey, setInputKey] = useState(currentKey);
+      const [showKey, setShowKey] = useState(false);
+      const [isValidating, setIsValidating] = useState(false);
+      const [errorMsg, setErrorMsg] = useState(null);
+      const [successMsg, setSuccessMsg] = useState(null);
+
+      const handleSubmit = async (e) => {
+        if (e) e.preventDefault();
+        setErrorMsg(null);
+        setSuccessMsg(null);
+        setIsValidating(true);
+
+        const res = await onConnect(inputKey);
+        setIsValidating(false);
+
+        if (res.success) {
+          setSuccessMsg('API key verified and connected successfully!');
+          setTimeout(() => {
+            onClose();
+          }, 900);
+        } else {
+          setErrorMsg(res.error || 'Failed to validate API key.');
+        }
+      };
+
+      return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+          <div className="relative w-full max-w-lg bg-[#0e1017] border border-groq-border rounded-xl shadow-2xl overflow-hidden">
+            
+            {/* Modal Header */}
+            <div className="flex items-center justify-between px-6 py-4 bg-[#141724] border-b border-groq-border">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-lg bg-orange-500/10 border border-orange-500/20 flex items-center justify-center">
+                  <IconKey className="w-4 h-4 text-orange-400" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-white">Connect Groq API Key</h3>
+                  <p className="text-xs text-gray-400">Direct client connection to GroqCloud</p>
+                </div>
+              </div>
+              {isConnected && (
+                <button onClick={onClose} className="p-1 rounded text-gray-400 hover:text-white hover:bg-gray-800 transition-colors">
+                  <IconClose className="w-4 h-4" />
+                </button>
+              )}
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-6 space-y-4">
+              
+              {/* Security Banner */}
+              <div className="flex items-start gap-3 p-3 rounded-lg bg-[#121624] border border-blue-500/20 text-xs text-gray-300">
+                <IconShieldCheck className="w-4 h-4 text-blue-400 shrink-0 mt-0.5" />
+                <div className="space-y-0.5">
+                  <span className="font-semibold text-blue-300">In-Memory Session Security:</span>
+                  <p className="text-gray-400 leading-relaxed">
+                    Your key is kept strictly in-memory during this browser session. It is never logged, never hardcoded, and never stored permanently.
+                  </p>
+                </div>
+              </div>
+
+              <form onSubmit={handleSubmit} className="space-y-3.5">
+                <div>
+                  <label className="block text-xs font-semibold uppercase tracking-wider text-gray-300 mb-1.5">
+                    Groq API Key
+                  </label>
+                  <div className="relative">
+                    <input
+                      type={showKey ? 'text' : 'password'}
+                      value={inputKey}
+                      onChange={(e) => {
+                        setInputKey(e.target.value);
+                        if (errorMsg) setErrorMsg(null);
+                      }}
+                      placeholder="gsk_..."
+                      autoFocus
+                      className="w-full px-3.5 py-2.5 pr-10 bg-[#161a26] border border-groq-border rounded-lg text-xs text-white placeholder-gray-500 focus:outline-none focus:border-orange-500 font-mono"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowKey(!showKey)}
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-200"
+                    >
+                      {showKey ? <IconEyeOff className="w-4 h-4" /> : <IconEye className="w-4 h-4" />}
+                    </button>
+                  </div>
+                  <p className="mt-1.5 text-[11px] text-gray-400">
+                    Don't have a key? Create one for free at{' '}
+                    <a href="https://console.groq.com/keys" target="_blank" rel="noreferrer" className="text-orange-400 hover:underline inline-flex items-center gap-0.5">
+                      console.groq.com/keys <IconExternalLink className="w-3 h-3" />
+                    </a>
+                  </p>
+                </div>
+
+                {/* Error Banner */}
+                {errorMsg && (
+                  <div className="flex items-start gap-2 p-3 rounded-lg bg-red-500/10 border border-red-500/30 text-xs text-red-300">
+                    <IconAlert className="w-4 h-4 text-red-400 shrink-0 mt-0.5" />
+                    <span>{errorMsg}</span>
+                  </div>
+                )}
+
+                {/* Success Banner */}
+                {successMsg && (
+                  <div className="flex items-center gap-2 p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-xs text-emerald-300">
+                    <IconCheck className="w-4 h-4 text-emerald-400 shrink-0" />
+                    <span>{successMsg}</span>
+                  </div>
+                )}
+
+                {/* Action Buttons */}
+                <div className="flex items-center justify-between pt-2">
+                  {isConnected ? (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setInputKey('');
+                        onDisconnect();
+                      }}
+                      className="px-3 py-1.5 text-xs font-medium text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded-lg border border-red-500/20"
+                    >
+                      Disconnect Key
+                    </button>
+                  ) : <div />}
+
+                  <div className="flex items-center gap-2">
+                    {isConnected && (
+                      <button
+                        type="button"
+                        onClick={onClose}
+                        className="px-3.5 py-2 text-xs font-medium text-gray-300 hover:text-white hover:bg-gray-800 rounded-lg"
+                      >
+                        Cancel
+                      </button>
+                    )}
+                    <button
+                      type="submit"
+                      disabled={isValidating || !inputKey.trim()}
+                      className="flex items-center gap-2 px-5 py-2 text-xs font-bold text-white gradient-groq hover:brightness-110 active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed rounded-lg shadow-lg shadow-orange-500/20 transition-all cursor-pointer"
+                    >
+                      {isValidating ? (
+                        <>
+                          <span className="w-3 h-3 rounded-full border-2 border-white border-t-transparent animate-spin"></span>
+                          Validating with Groq...
+                        </>
+                      ) : (
+                        <>
+                          <IconKey className="w-3.5 h-3.5" />
+                          {isConnected ? 'Update & Validate' : 'Connect API Key'}
+                        </>
+                      )}
+                    </button>
+                  </div>
+                </div>
+
+              </form>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // --- CODE EXPORT MODAL COMPONENT ---
+    function CodeExportModalComponent({ isOpen, onClose, model, systemPrompt, examples, userPrompt, parameters }) {
+      const [activeTab, setActiveTab] = useState('python');
+      const [copied, setCopied] = useState(false);
+
+      const messagesList = [];
+      if (systemPrompt.trim()) {
+        messagesList.push({ role: 'system', content: systemPrompt.trim() });
+      }
+      examples.forEach(ex => {
+        if (ex.userInput.trim() && ex.assistantResponse.trim()) {
+          messagesList.push({ role: 'user', content: ex.userInput.trim() });
+          messagesList.push({ role: 'assistant', content: ex.assistantResponse.trim() });
+        }
+      });
+      messagesList.push({ role: 'user', content: userPrompt.trim() || 'Your prompt question here...' });
+
+      const pythonCode = `import os
+from groq import Groq
+
+client = Groq(
+    api_key=os.environ.get("GROQ_API_KEY"),
+)
+
+completion = client.chat.completions.create(
+    model="${model}",
+    messages=${JSON.stringify(messagesList, null, 4)},
+    temperature=${parameters.temperature},
+    max_tokens=${parameters.maxTokens},
+    top_p=${parameters.topP},
+    frequency_penalty=${parameters.frequencyPenalty},
+    presence_penalty=${parameters.presencePenalty},
+    stream=${parameters.stream ? 'True' : 'False'},
+)
+
+${parameters.stream ? `for chunk in completion:
+    print(chunk.choices[0].delta.content or "", end="")` : `print(completion.choices[0].message.content)`}`;
+
+      const jsCode = `import Groq from "groq-sdk";
+
+const groq = new Groq({
+  apiKey: process.env.GROQ_API_KEY,
+});
+
+async function main() {
+  const completion = await groq.chat.completions.create({
+    model: "${model}",
+    messages: ${JSON.stringify(messagesList, null, 4)},
+    temperature: ${parameters.temperature},
+    max_tokens: ${parameters.maxTokens},
+    top_p: ${parameters.topP},
+    frequency_penalty: ${parameters.frequencyPenalty},
+    presence_penalty: ${parameters.presencePenalty},
+    stream: ${parameters.stream},
+  });
+
+  ${parameters.stream ? `for await (const chunk of completion) {
+    process.stdout.write(chunk.choices[0]?.delta?.content || "");
+  }` : `console.log(completion.choices[0]?.message?.content);`}
+}
+
+main().catch(console.error);`;
+
+      const curlCode = `curl https://api.groq.com/openai/v1/chat/completions \\
+  -H "Authorization: Bearer $GROQ_API_KEY" \\
+  -H "Content-Type: application/json" \\
+  -d '${JSON.stringify({
+    model,
+    messages: messagesList,
+    temperature: parameters.temperature,
+    max_tokens: parameters.maxTokens,
+    top_p: parameters.topP,
+    frequency_penalty: parameters.frequencyPenalty,
+    presence_penalty: parameters.presencePenalty,
+    stream: parameters.stream
+  }, null, 2)}'`;
+
+      const currentCode = activeTab === 'python' ? pythonCode : activeTab === 'javascript' ? jsCode : curlCode;
+
+      const handleCopy = () => {
+        navigator.clipboard.writeText(currentCode);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+      };
+
+      return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+          <div className="relative w-full max-w-2xl bg-[#0e1017] border border-groq-border rounded-xl shadow-2xl overflow-hidden flex flex-col max-h-[85vh]">
+            
+            <div className="flex items-center justify-between px-6 py-4 bg-[#141724] border-b border-groq-border">
+              <div className="flex items-center gap-2">
+                <IconCode className="w-4 h-4 text-purple-400" />
+                <h3 className="text-sm font-bold text-white">Export Code Snippet</h3>
+              </div>
+              <button onClick={onClose} className="p-1 rounded text-gray-400 hover:text-white hover:bg-gray-800">
+                <IconClose className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="flex items-center justify-between px-6 py-2.5 bg-[#12141e] border-b border-groq-border">
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setActiveTab('python')}
+                  className={`px-3 py-1 rounded-lg text-xs font-semibold ${
+                    activeTab === 'python' ? 'bg-orange-500/20 text-orange-400 border border-orange-500/40' : 'text-gray-400 hover:text-white'
+                  }`}
+                >
+                  Python
+                </button>
+                <button
+                  onClick={() => setActiveTab('javascript')}
+                  className={`px-3 py-1 rounded-lg text-xs font-semibold ${
+                    activeTab === 'javascript' ? 'bg-orange-500/20 text-orange-400 border border-orange-500/40' : 'text-gray-400 hover:text-white'
+                  }`}
+                >
+                  JavaScript
+                </button>
+                <button
+                  onClick={() => setActiveTab('curl')}
+                  className={`px-3 py-1 rounded-lg text-xs font-semibold ${
+                    activeTab === 'curl' ? 'bg-orange-500/20 text-orange-400 border border-orange-500/40' : 'text-gray-400 hover:text-white'
+                  }`}
+                >
+                  cURL
+                </button>
+              </div>
+
+              <button
+                onClick={handleCopy}
+                className="flex items-center gap-1.5 px-3 py-1 rounded bg-gray-800 hover:bg-gray-700 text-xs font-medium text-gray-200 transition-colors"
+              >
+                {copied ? (
+                  <>
+                    <IconCheck className="w-3.5 h-3.5 text-emerald-400" />
+                    <span className="text-emerald-400">Copied</span>
+                  </>
+                ) : (
+                  <>
+                    <IconCopy className="w-3.5 h-3.5" />
+                    <span>Copy Code</span>
+                  </>
+                )}
+              </button>
+            </div>
+
+            <div className="flex-1 p-6 overflow-y-auto bg-[#090a0f]">
+              <pre className="p-4 rounded-lg bg-[#0e1018] border border-groq-border font-mono text-xs text-orange-300/90 overflow-x-auto leading-relaxed">
+                <code>{currentCode}</code>
+              </pre>
+            </div>
+
+            <div className="px-6 py-3 bg-[#141724] border-t border-groq-border text-[11px] text-gray-400 flex justify-between">
+              <span>Model: <strong className="text-white">{model}</strong></span>
+              <span>Requires <code className="text-orange-400">GROQ_API_KEY</code></span>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // Render the App
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<App />);
+  </script>
+</body>
+</html>
